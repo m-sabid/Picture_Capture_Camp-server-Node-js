@@ -143,18 +143,20 @@ app.get("/api/users", verifyJWT, async (req, res) => {
   }
 });
 
-// Post A new classes [Only instructor can add classes]
-app.post("/api/classes", verifyJWT, async (req, res) => {
+app.post("/api/classes", async (req, res) => {
   try {
-    const { title, seats, price, image, instructorName, InstructorEmail } =
+    // Check if the user's role is "instructor"
+    // if (req.decoded.role !== "instructor") {
+    //   return res.status(403).json({
+    //     error: "Access denied. Only instructor users can access this endpoint.",
+    //   });
+    // }
+    const { title, seats, price, image, instructorName, instructorEmail } =
       req.body;
 
-    // Check if the user's role is "instructor"
-    if (req.decoded.role !== "instructor") {
-      return res.status(403).json({
-        error: "Access denied. Only instructor users can access this endpoint.",
-      });
-    }
+    // Parse seats and price as numbers
+    const parsedSeats = parseInt(seats);
+    const parsedPrice = parseFloat(price);
 
     // Save the new class to MongoDB
     const result = await client
@@ -162,11 +164,12 @@ app.post("/api/classes", verifyJWT, async (req, res) => {
       .collection("classes")
       .insertOne({
         title,
-        seats,
-        price,
+        seats: parsedSeats,
+        price: parsedPrice,
         image,
+        instructorEmail,
         instructorName,
-        InstructorEmail,
+        status: "pending",
       });
 
     if (result.insertedId) {
