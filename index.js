@@ -360,6 +360,56 @@ async function run() {
       }
     });
 
+     // payment related api
+     app.post("/create-payment-intent", async (req, res) => {
+      const { price } = req.body;
+      const amount = price * 100;
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        automatic_payment_methods: {
+          enabled: true,
+        },
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+
+    app.post("/api/payments", verifyJWT, async (req, res) => {
+      try {
+        const payment = req.body;
+        const { id, classId } = payment;
+
+        console.log(classId, id);
+
+        // Update the class collection to increment the students count
+        await classCollection.updateOne(
+          { _id: new ObjectId(classId) },
+          { $inc: { students: 1, seats: -1 } }
+        );
+
+        // Insert the payment into the payment collection
+        const insertResult = await paymentCollection.insertOne(payment);
+
+        // Remove the class from the user's cart
+        const deleteResult = await cartCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
+
+        // Insert the enrolled class into the enrolled collection
+        const enrolledClass = await enrolledCollection.insertOne({
+          _id: new ObjectId(classId),
+        });
+
+        res.send({ insertResult, deleteResult });
+      } catch (error) {
+        console.error("Error processing payment:", error);
+        return res.status(500).json({ error: "Internal Server Error" });
+      }
+    });
+
 
 
     await client.db("admin").command({ ping: 1 });
