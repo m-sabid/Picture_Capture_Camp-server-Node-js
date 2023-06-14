@@ -154,6 +154,45 @@ async function run() {
           return res.status(500).json({ error: "Internal Server Error" });
         }
       });
+
+      // popular-instructors API
+    app.get("/api/popular-instructors", async (req, res) => {
+      try {
+        const instructors = await usersCollection
+          .find({ role: "instructor" })
+          .toArray();
+        const popularInstructors = [];
+
+        for (const instructor of instructors) {
+          const classes = await classCollection
+            .find({ instructorEmail: instructor.email })
+            .toArray();
+          let totalStudents = 0;
+
+          if (classes.length > 0) {
+            for (const classItem of classes) {
+              totalStudents += classItem.students;
+            }
+          }
+
+          popularInstructors.push({
+            name: instructor.name,
+            email: instructor.email,
+            photoURL: instructor.photoURL,
+            totalClasses: classes.length,
+            totalStudents: totalStudents,
+          });
+        }
+
+        popularInstructors.sort((a, b) => b.totalStudents - a.totalStudents);
+        popularInstructors.splice(6);
+
+        res.json(popularInstructors);
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: true, message: "An error occurred" });
+      }
+    });
   
 
 
