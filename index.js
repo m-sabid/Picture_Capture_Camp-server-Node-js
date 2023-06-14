@@ -78,6 +78,86 @@ async function run() {
     });
 
 
+       // Users related APIs
+       app.post("/users", async (req, res) => {
+        const user = req.body;
+        const query = { email: user.email };
+        const existingUser = await usersCollection.findOne(query);
+  
+        if (existingUser) {
+          return res.json({ message: "User already exists" });
+        }
+  
+        const result = await usersCollection.insertOne(user);
+        res.json(result);
+      });
+  
+      app.get("/users", async (req, res) => {
+        const result = await usersCollection.find().toArray();
+        res.json(result);
+      });
+  
+      app.get("/users/admin/:email", verifyJWT, async (req, res) => {
+        const email = req.params.email;
+  
+        if (req.decoded.email !== email) {
+          res.json({ admin: false });
+        }
+  
+        const query = { email: email };
+        const user = await usersCollection.findOne(query);
+        const result = { admin: user?.role === "admin" };
+        res.json(result);
+      });
+  
+      app.get("/users/instructor/:email", verifyJWT, async (req, res) => {
+        const email = req.params.email;
+  
+        if (req.decoded.email !== email) {
+          res.json({ instructor: false });
+        }
+  
+        const query = { email: email };
+        const user = await usersCollection.findOne(query);
+        const result = { instructor: user?.role === "instructor" };
+        res.json(result);
+      });
+  
+      app.patch("/user/role/:id", async (req, res) => {
+        try {
+          const id = req.params.id;
+          const { role } = req.body;
+  
+          const filter = { _id: new ObjectId(id) };
+          const updateDoc = {
+            $set: {
+              role: role,
+            },
+          };
+  
+          const usersCollection = client
+            .db("picture_capture_camp_data")
+            .collection("users");
+  
+          const result = await usersCollection.updateOne(filter, updateDoc);
+  
+          if (result.modifiedCount === 1) {
+            // Role updated successfully
+            console.log("User role updated successfully");
+            return res.json({ success: true });
+          } else {
+            // Failed to update the role
+            return res.json({ success: false });
+          }
+        } catch (error) {
+          console.error("Error updating user role in MongoDB:", error);
+          return res.status(500).json({ error: "Internal Server Error" });
+        }
+      });
+  
+
+
+
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
