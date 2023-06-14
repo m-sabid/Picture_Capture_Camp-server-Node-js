@@ -321,6 +321,45 @@ async function run() {
       }
     });
 
+    // Cart related routes
+    app.post("/api/classes/cart", async (req, res) => {
+      const item = req.body;
+      const existingItem = await cartCollection.findOne(item);
+      if (existingItem) {
+        return res.status(400).json({ message: "Item already exists" });
+      }
+
+      const result = await cartCollection.insertOne(item);
+      res.json(result);
+    });
+
+    app.get("/api/all-carts", async (req, res) => {
+      const result = await cartCollection.find().toArray();
+      res.json(result);
+    });
+
+    app.delete("/api/carts/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+
+        const filter = { _id: new ObjectId(id) };
+
+        const result = await cartCollection.deleteOne(filter);
+
+        console.log(result);
+
+        if (result.deletedCount === 1) {
+          console.log("Class deleted from cart successfully");
+          return res.json({ success: true });
+        } else {
+          return res.json({ success: false });
+        }
+      } catch (error) {
+        console.error("Error deleting class from MongoDB:", error);
+        return res.status(500).json({ error: "Internal Server Error" });
+      }
+    });
+
 
 
     await client.db("admin").command({ ping: 1 });
