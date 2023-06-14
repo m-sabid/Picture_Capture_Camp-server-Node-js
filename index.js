@@ -30,10 +30,52 @@ async function run() {
 
 
 
+        // JWT verification middleware
+        const verifyJWT = (req, res, next) => {
+          const authorization = req.headers.authorization;
+          if (!authorization) {
+            return res
+              .status(401)
+              .send({ error: true, message: "unauthorized access" });
+          }
+          // bearer token
+          const token = authorization.split(" ")[1];
+    
+          jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+            if (err) {
+              return res
+                .status(401)
+                .send({ error: true, message: "unauthorized access" });
+            }
+            req.decoded = decoded;
+            next();
+          });
+        };
+    
+        // Admin verification middleware
+        const verifyAdmin = async (req, res, next) => {
+          const email = req.decoded.email;
+          const query = { email: email };
+          const user = await usersCollection.findOne(query);
+          if (user?.role !== "admin") {
+            return res
+              .status(403)
+              .send({ error: true, message: "forbidden message" });
+          }
+          next();
+        };
+
+
+
     app.get("/", (req, res) => {
       res.send("Running...");
     });
 
+    app.post("/jwt", (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "1h" });
+      res.json({ token });
+    });
 
 
     await client.db("admin").command({ ping: 1 });
