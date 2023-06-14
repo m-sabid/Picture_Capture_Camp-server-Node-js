@@ -411,6 +411,12 @@ async function run() {
     });
 
 
+      // Enrolled Classes Api
+      app.get("/api/enrolled", async (req, res) => {
+        const result = await paymentCollection.find().toArray();
+        res.json(result);
+      });
+
 
     await client.db("admin").command({ ping: 1 });
     console.log(
