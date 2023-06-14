@@ -25,47 +25,58 @@ async function run() {
 
     // Collections
     const usersCollection = client
-    .db("picture_capture_camp_data")
-    .collection("users");
+      .db("picture_capture_camp_data")
+      .collection("users");
+    const classCollection = client
+      .db("picture_capture_camp_data")
+      .collection("classes");
+    const manageClassesCollection = client
+      .db("picture_capture_camp_data")
+      .collection("manage-classes");
+    const cartCollection = client
+      .db("picture_capture_camp_data")
+      .collection("carts");
+    const paymentCollection = client
+      .db("picture_capture_camp_data")
+      .collection("payments");
+    const enrolledCollection = client
+      .db("picture_capture_camp_data")
+      .collection("enrolls");
 
+    // JWT verification middleware
+    const verifyJWT = (req, res, next) => {
+      const authorization = req.headers.authorization;
+      if (!authorization) {
+        return res
+          .status(401)
+          .send({ error: true, message: "unauthorized access" });
+      }
+      // bearer token
+      const token = authorization.split(" ")[1];
 
+      jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+        if (err) {
+          return res
+            .status(401)
+            .send({ error: true, message: "unauthorized access" });
+        }
+        req.decoded = decoded;
+        next();
+      });
+    };
 
-        // JWT verification middleware
-        const verifyJWT = (req, res, next) => {
-          const authorization = req.headers.authorization;
-          if (!authorization) {
-            return res
-              .status(401)
-              .send({ error: true, message: "unauthorized access" });
-          }
-          // bearer token
-          const token = authorization.split(" ")[1];
-    
-          jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-            if (err) {
-              return res
-                .status(401)
-                .send({ error: true, message: "unauthorized access" });
-            }
-            req.decoded = decoded;
-            next();
-          });
-        };
-    
-        // Admin verification middleware
-        const verifyAdmin = async (req, res, next) => {
-          const email = req.decoded.email;
-          const query = { email: email };
-          const user = await usersCollection.findOne(query);
-          if (user?.role !== "admin") {
-            return res
-              .status(403)
-              .send({ error: true, message: "forbidden message" });
-          }
-          next();
-        };
-
-
+    // Admin verification middleware
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      if (user?.role !== "admin") {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden message" });
+      }
+      next();
+    };
 
     app.get("/", (req, res) => {
       res.send("Running...");
@@ -77,85 +88,84 @@ async function run() {
       res.json({ token });
     });
 
+    // Users related APIs
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      const query = { email: user.email };
+      const existingUser = await usersCollection.findOne(query);
 
-       // Users related APIs
-       app.post("/users", async (req, res) => {
-        const user = req.body;
-        const query = { email: user.email };
-        const existingUser = await usersCollection.findOne(query);
-  
-        if (existingUser) {
-          return res.json({ message: "User already exists" });
-        }
-  
-        const result = await usersCollection.insertOne(user);
-        res.json(result);
-      });
-  
-      app.get("/users", async (req, res) => {
-        const result = await usersCollection.find().toArray();
-        res.json(result);
-      });
-  
-      app.get("/users/admin/:email", verifyJWT, async (req, res) => {
-        const email = req.params.email;
-  
-        if (req.decoded.email !== email) {
-          res.json({ admin: false });
-        }
-  
-        const query = { email: email };
-        const user = await usersCollection.findOne(query);
-        const result = { admin: user?.role === "admin" };
-        res.json(result);
-      });
-  
-      app.get("/users/instructor/:email", verifyJWT, async (req, res) => {
-        const email = req.params.email;
-  
-        if (req.decoded.email !== email) {
-          res.json({ instructor: false });
-        }
-  
-        const query = { email: email };
-        const user = await usersCollection.findOne(query);
-        const result = { instructor: user?.role === "instructor" };
-        res.json(result);
-      });
-  
-      app.patch("/user/role/:id", async (req, res) => {
-        try {
-          const id = req.params.id;
-          const { role } = req.body;
-  
-          const filter = { _id: new ObjectId(id) };
-          const updateDoc = {
-            $set: {
-              role: role,
-            },
-          };
-  
-          const usersCollection = client
-            .db("picture_capture_camp_data")
-            .collection("users");
-  
-          const result = await usersCollection.updateOne(filter, updateDoc);
-  
-          if (result.modifiedCount === 1) {
-            // Role updated successfully
-            console.log("User role updated successfully");
-            return res.json({ success: true });
-          } else {
-            // Failed to update the role
-            return res.json({ success: false });
-          }
-        } catch (error) {
-          console.error("Error updating user role in MongoDB:", error);
-          return res.status(500).json({ error: "Internal Server Error" });
-        }
-      });
+      if (existingUser) {
+        return res.json({ message: "User already exists" });
+      }
 
-      // popular-instructors API
+      const result = await usersCollection.insertOne(user);
+      res.json(result);
+    });
+
+    app.get("/users", async (req, res) => {
+      const result = await usersCollection.find().toArray();
+      res.json(result);
+    });
+
+    app.get("/users/admin/:email", verifyJWT, async (req, res) => {
+      const email = req.params.email;
+
+      if (req.decoded.email !== email) {
+        res.json({ admin: false });
+      }
+
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      const result = { admin: user?.role === "admin" };
+      res.json(result);
+    });
+
+    app.get("/users/instructor/:email", verifyJWT, async (req, res) => {
+      const email = req.params.email;
+
+      if (req.decoded.email !== email) {
+        res.json({ instructor: false });
+      }
+
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      const result = { instructor: user?.role === "instructor" };
+      res.json(result);
+    });
+
+    app.patch("/user/role/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const { role } = req.body;
+
+        const filter = { _id: new ObjectId(id) };
+        const updateDoc = {
+          $set: {
+            role: role,
+          },
+        };
+
+        const usersCollection = client
+          .db("picture_capture_camp_data")
+          .collection("users");
+
+        const result = await usersCollection.updateOne(filter, updateDoc);
+
+        if (result.modifiedCount === 1) {
+          // Role updated successfully
+          console.log("User role updated successfully");
+          return res.json({ success: true });
+        } else {
+          // Failed to update the role
+          return res.json({ success: false });
+        }
+      } catch (error) {
+        console.error("Error updating user role in MongoDB:", error);
+        return res.status(500).json({ error: "Internal Server Error" });
+      }
+    });
+
+    // popular-instructors API
     app.get("/api/popular-instructors", async (req, res) => {
       try {
         const instructors = await usersCollection
@@ -193,9 +203,9 @@ async function run() {
         res.status(500).json({ error: true, message: "An error occurred" });
       }
     });
-  
-     // Class related APIs
-     app.post("/api/classes", async (req, res) => {
+
+    // Class related APIs
+    app.post("/api/classes", async (req, res) => {
       try {
         const { title, seats, price, image, instructorName, instructorEmail } =
           req.body;
@@ -360,8 +370,8 @@ async function run() {
       }
     });
 
-     // payment related api
-     app.post("/create-payment-intent", async (req, res) => {
+    // payment related api
+    app.post("/create-payment-intent", async (req, res) => {
       const { price } = req.body;
       const amount = price * 100;
       const paymentIntent = await stripe.paymentIntents.create({
@@ -410,13 +420,11 @@ async function run() {
       }
     });
 
-
-      // Enrolled Classes Api
-      app.get("/api/enrolled", async (req, res) => {
-        const result = await paymentCollection.find().toArray();
-        res.json(result);
-      });
-
+    // Enrolled Classes Api
+    app.get("/api/enrolled", async (req, res) => {
+      const result = await paymentCollection.find().toArray();
+      res.json(result);
+    });
 
     await client.db("admin").command({ ping: 1 });
     console.log(
