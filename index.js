@@ -153,7 +153,6 @@ async function run() {
 
         if (result.modifiedCount === 1) {
           // Role updated successfully
-          console.log("User role updated successfully");
           return res.json({ success: true });
         } else {
           // Failed to update the role
@@ -230,7 +229,6 @@ async function run() {
         if (result.insertedId) {
           // New class added successfully
           res.json({ success: true });
-          console.log("New class added successfully");
         } else {
           // Failed to add the class
           res.json({ success: false });
@@ -272,10 +270,8 @@ async function run() {
           updateDoc
         );
 
-        console.log(result);
 
         if (result.modifiedCount === 1) {
-          console.log("Class status updated successfully");
 
           if (feedback) {
             await classCollection.updateOne(filter, { $set: { feedback } });
@@ -302,10 +298,9 @@ async function run() {
 
         const result = await classCollection.deleteOne(filter);
 
-        console.log(result);
+     
 
         if (result.deletedCount === 1) {
-          console.log("Class deleted successfully");
           return res.json({ success: true });
         } else {
           return res.json({ success: false });
@@ -356,10 +351,9 @@ async function run() {
 
         const result = await cartCollection.deleteOne(filter);
 
-        console.log(result);
+
 
         if (result.deletedCount === 1) {
-          console.log("Class deleted from cart successfully");
           return res.json({ success: true });
         } else {
           return res.json({ success: false });
@@ -392,7 +386,6 @@ async function run() {
         const payment = req.body;
         const { id, classId } = payment;
 
-        console.log(classId, id);
 
         // Update the class collection to increment the students count
         await classCollection.updateOne(
