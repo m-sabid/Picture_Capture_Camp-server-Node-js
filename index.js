@@ -23,6 +23,13 @@ async function run() {
   try {
     await client.connect();
 
+    // Collections
+    const usersCollection = client
+    .db("picture_capture_camp_data")
+    .collection("users");
+
+
+
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
